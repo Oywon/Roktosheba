@@ -1,0 +1,61 @@
+.language-selector {
+  position: relative;
+  display: inline-block;
+}
+
+.language-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding: 8px 32px 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(200, 30, 58, 0.2);
+  background: linear-gradient(135deg, rgba(200, 30, 58, 0.04), rgba(255, 107, 114, 0.02));
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 160ms ease;
+  font-size: 0.95rem;
+}
+
+.language-select:hover {
+  border-color: rgba(200, 30, 58, 0.4);
+  background: linear-gradient(135deg, rgba(200, 30, 58, 0.08), rgba(255, 107, 114, 0.06));
+}
+
+.language-select:focus {
+  outline: none;
+  border-color: #c81e3a;
+  box-shadow: 0 0 0 3px rgba(200, 30, 58, 0.1);
+}
+
+.language-icon {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  font-size: 1.1rem;
+}
+
+/* Dark Mode */
+:root.dark-mode .language-select {
+  background: linear-gradient(135deg, rgba(200, 30, 58, 0.15), rgba(255, 107, 114, 0.1));
+  border-color: rgba(200, 30, 58, 0.3);
+  color: #e0e0e0;
+}
+
+:root.dark-mode .language-select:hover {
+  background: linear-gradient(135deg, rgba(200, 30, 58, 0.2), rgba(255, 107, 114, 0.15));
+  border-color: rgba(200, 30, 58, 0.5);
+}
+
+:root.dark-mode .language-select:focus {
+  border-color: #ff6b72;
+  box-shadow: 0 0 0 3px rgba(255, 107, 114, 0.2);
+}
+
+:root.dark-mode .language-select option {
+  background-color: #1a1a1f;
+  color: #e0e0e0;
+}

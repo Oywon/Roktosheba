@@ -1,0 +1,149 @@
+.emergency-hotline {
+  margin: 28px 0;
+  padding: 24px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(200, 30, 58, 0.08), rgba(255, 107, 114, 0.06));
+  border: 1px solid rgba(200, 30, 58, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.emergency-hotline::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #c81e3a, #ff6b72);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.emergency-header {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.emergency-badge {
+  display: inline-block;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #c81e3a, #ff6b72);
+  color: white;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+
+.emergency-header h2 {
+  margin: 0 0 8px;
+  color: var(--text);
+  font-size: 1.8rem;
+}
+
+.emergency-header p {
+  margin: 0;
+  color: var(--muted-text);
+  font-size: 1rem;
+}
+
+.hotlines-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.hotline-card {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 253, 253, 0.6));
+  border: 1px solid rgba(200, 30, 58, 0.1);
+  transition: all 200ms ease;
+}
+
+.hotline-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(200, 30, 58, 0.15);
+  border-color: rgba(200, 30, 58, 0.2);
+}
+
+.hotline-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+  animation: ring 2s ease-in-out infinite;
+}
+
+@keyframes ring {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(10deg); }
+  75% { transform: rotate(-10deg); }
+}
+
+.hotline-content {
+  flex: 1;
+}
+
+.hotline-content h3 {
+  margin: 0 0 4px;
+  font-size: 1.1rem;
+  color: var(--text);
+}
+
+.hotline-desc {
+  margin: 0 0 12px;
+  color: var(--muted-text);
+  font-size: 0.9rem;
+}
+
+.hotline-numbers {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.phone-btn {
+  display: inline-block;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #c81e3a, #ff6b72);
+  color: white;
+  font-weight: 700;
+  text-decoration: none;
+  text-align: center;
+  font-family: 'IBM Plex Mono', monospace;
+  transition: all 160ms ease;
+  box-shadow: 0 4px 12px rgba(200, 30, 58, 0.15);
+}
+
+.phone-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(200, 30, 58, 0.25);
+}
+
+.phone-btn:active {
+  transform: scale(0.98);
+}
+
+/* Dark Mode */
+:root.dark-mode .emergency-hotline {
+  background: linear-gradient(135deg, rgba(200, 30, 58, 0.15), rgba(255, 107, 114, 0.1));
+  border-color: rgba(200, 30, 58, 0.3);
+}
+
+:root.dark-mode .hotline-card {
+  background: linear-gradient(135deg, rgba(30, 30, 40, 0.8), rgba(40, 40, 50, 0.8));
+  border-color: rgba(200, 30, 58, 0.2);
+}
+
+:root.dark-mode .hotline-card:hover {
+  background: linear-gradient(135deg, rgba(40, 40, 50, 0.9), rgba(50, 50, 60, 0.9));
+  box-shadow: 0 12px 32px rgba(200, 30, 58, 0.25);
+}

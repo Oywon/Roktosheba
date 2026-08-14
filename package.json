@@ -1,0 +1,16 @@
+{
+  "name": "roktosheba",
+  "version": "1.0.0",
+  "description": "Emergency blood donor network for Bangladesh.",
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm:dev --prefix backend\" \"npm:dev --prefix frontend\"",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}

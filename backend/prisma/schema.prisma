@@ -1,0 +1,45 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Donor {
+  id           String   @id @default(uuid())
+  name         String
+  phone        String   @unique
+  bloodGroup   String
+  district     String
+  area         String?
+  lastDonation DateTime?
+  available    Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  expiresAt    DateTime
+  reports      Int      @default(0)
+}
+
+model EmergencyRequest {
+  id           String   @id @default(uuid())
+  bloodGroup   String
+  hospital     String
+  district     String
+  contactPhone String
+  unitsNeeded  String?
+  note         String?
+  fulfilled    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  reports      Int      @default(0)
+}
+
+model Organization {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  founded     String
+  description String
+  websiteUrl  String
+}
