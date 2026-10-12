@@ -8,18 +8,38 @@ datasource db {
 }
 
 model Donor {
-  id           String   @id @default(uuid())
-  name         String
-  phone        String   @unique
-  bloodGroup   String
-  district     String
-  area         String?
-  lastDonation DateTime?
-  available    Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  expiresAt    DateTime
-  reports      Int      @default(0)
+  id             String                @id @default(uuid())
+  name           String
+  phone          String                @unique
+  bloodGroup     String
+  district       String
+  area           String?
+  lastDonation   DateTime?
+  age            Int?
+  gender         String?
+  available      Boolean               @default(true)
+  consent        Boolean               @default(false)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  expiresAt      DateTime
+  reports        Int                   @default(0)
+  contactRequests DonorContactRequest[] @relation("DonorContactRequests")
+}
+
+model DonorContactRequest {
+  id                 String   @id @default(uuid())
+  donorId            String
+  donor              Donor    @relation("DonorContactRequests", fields: [donorId], references: [id])
+  donorName          String?
+  requesterName      String
+  requesterPhone     String
+  requesterMessage   String?
+  donorPhone         String?
+  donorPhoneVisible  Boolean  @default(false)
+  requesterPhoneVisible Boolean @default(true)
+  status             String   @default("PENDING")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 model EmergencyRequest {
@@ -42,4 +62,5 @@ model Organization {
   founded     String
   description String
   websiteUrl  String
+  contactPhone String?
 }

@@ -80,9 +80,30 @@ export type Donor = {
   district: District;
   area?: string | null;
   available: boolean;
+  lastDonation?: string | null;
+  age?: number | null;
+  gender?: string | null;
+  consent?: boolean;
   createdAt: string;
   updatedAt: string;
-  contactPhone: string;
+  contactPhone?: string | null;
+};
+
+export type Gender = 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY';
+
+export type ContactRequest = {
+  id: string;
+  donorId: string;
+  donorName?: string | null;
+  requesterName: string;
+  requesterPhone: string;
+  requesterMessage?: string | null;
+  status: 'PENDING' | 'ACCEPTED' | 'DECLINED';
+  createdAt: string;
+  updatedAt: string;
+  donorPhone?: string | null;
+  requesterPhoneVisible?: boolean;
+  donorPhoneVisible?: boolean;
 };
 
 export type EmergencyRequest = {

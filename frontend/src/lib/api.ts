@@ -1,4 +1,4 @@
-import { BloodGroup, District, Donor, EmergencyRequest, Organization } from '../types';
+import { BloodGroup, ContactRequest, District, Donor, EmergencyRequest, Organization } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
 
@@ -44,12 +44,54 @@ export const createDonor = async (payload: {
   area?: string;
   lastDonation?: string;
   available: boolean;
-  verificationToken: string;
+  age?: number;
+  gender?: string;
+  consent: boolean;
+  verificationToken?: string;
 }) => {
   return fetch(`${API_BASE}/donors`, {
     method: 'POST',
     headers: defaultHeaders,
     body: JSON.stringify(payload),
+  }).then(parseJson);
+};
+
+export const createDonorContactRequest = async (payload: {
+  donorId: string;
+  requesterName: string;
+  requesterPhone: string;
+  message: string;
+}) => {
+  return fetch(`${API_BASE}/donors/${payload.donorId}/contact-requests`, {
+    method: 'POST',
+    headers: defaultHeaders,
+    body: JSON.stringify(payload),
+  }).then(parseJson) as Promise<{ id: string; status: string; message: string }>;
+};
+
+export const respondToContactRequest = async (
+  requestId: string,
+  donorPhone: string,
+  status: 'ACCEPTED' | 'DECLINED',
+  verificationToken: string,
+) => {
+  return fetch(`${API_BASE}/contact-requests/${requestId}/respond`, {
+    method: 'PATCH',
+    headers: defaultHeaders,
+    body: JSON.stringify({ donorPhone, status, verificationToken }),
+  }).then(parseJson) as Promise<ContactRequest & { donorPhone?: string | null; requesterPhone?: string | null }>;
+};
+
+export const fetchContactRequestsForDonor = async (donorPhone: string, verificationToken: string) => {
+  return fetch(`${API_BASE}/contact-requests?donorPhone=${encodeURIComponent(donorPhone)}`, {
+    headers: { Authorization: `Bearer ${verificationToken}` },
+  }).then(parseJson) as Promise<ContactRequest[]>;
+};
+
+export const reportDonor = async (donorId: string) => {
+  return fetch(`${API_BASE}/donors/${donorId}/report`, {
+    method: 'POST',
+    headers: defaultHeaders,
   }).then(parseJson);
 };
 
@@ -65,7 +107,6 @@ export const createRequest = async (payload: {
   contactPhone: string;
   unitsNeeded?: string;
   note?: string;
-  verificationToken: string;
 }) => {
   return fetch(`${API_BASE}/requests`, {
     method: 'POST',

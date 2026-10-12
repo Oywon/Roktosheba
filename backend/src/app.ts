@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import { json } from 'body-parser';
+import { Prisma } from '@prisma/client';
 import { prisma } from './db';
 import { asyncHandler, createJwt, verifyJwt, sanitizePhone, validateBody, validatePhone, sendJson } from './utils';
 import { z } from 'zod';
@@ -13,6 +14,7 @@ app.use(json());
 
 const otpStore = new Map<string, { code: string; expiresAt: number }>();
 const rateLimitStore = new Map<string, { count: number; expiresAt: number }>();
+const donorContactRequestLimitStore = new Map<string, { count: number; expiresAt: number }>();
 
 const requestOtpSchema = z.object({ phone: z.string().min(8) });
 const verifyOtpSchema = z.object({ phone: z.string().min(8), code: z.string().min(4).max(6), purpose: z.enum(['donor', 'request', 'edit']) });
@@ -21,10 +23,13 @@ const donorCreateSchema = z.object({
   phone: z.string().min(8),
   bloodGroup: z.enum(['A_PLUS', 'A_MINUS', 'B_PLUS', 'B_MINUS', 'AB_PLUS', 'AB_MINUS', 'O_PLUS', 'O_MINUS']),
   district: z.string().min(2),
-  area: z.string().optional(),
+  area: z.string().min(2).optional(),
   lastDonation: z.string().optional(),
+  age: z.coerce.number().int().min(18).max(80).optional(),
+  gender: z.enum(['MALE', 'FEMALE', 'OTHER', 'PREFER_NOT_TO_SAY']).optional(),
   available: z.boolean().optional(),
-  verificationToken: z.string(),
+  consent: z.boolean().default(false),
+  verificationToken: z.string().optional(),
 });
 const donorEditSchema = z.object({
   name: z.string().min(2).optional(),
@@ -42,7 +47,6 @@ const requestCreateSchema = z.object({
   contactPhone: z.string().min(8),
   unitsNeeded: z.string().optional(),
   note: z.string().optional(),
-  verificationToken: z.string(),
 });
 
 const rateLimit = (key: string, limit = 10, windowSeconds = 60) => {
@@ -55,6 +59,19 @@ const rateLimit = (key: string, limit = 10, windowSeconds = 60) => {
   if (entry.count >= limit) return false;
   entry.count += 1;
   rateLimitStore.set(key, entry);
+  return true;
+};
+
+const dailyRateLimit = (key: string, limit = 5, windowMs = 24 * 60 * 60 * 1000) => {
+  const now = Date.now();
+  const entry = donorContactRequestLimitStore.get(key);
+  if (!entry || entry.expiresAt < now) {
+    donorContactRequestLimitStore.set(key, { count: 1, expiresAt: now + windowMs });
+    return true;
+  }
+  if (entry.count >= limit) return false;
+  entry.count += 1;
+  donorContactRequestLimitStore.set(key, entry);
   return true;
 };
 
@@ -109,7 +126,7 @@ app.get('/api/donors', asyncHandler(async (req, res) => {
   if (filters.bloodGroup) where.bloodGroup = filters.bloodGroup;
   if (filters.district) where.district = filters.district;
   if (filters.area) {
-    where.area = { contains: String(filters.area), mode: 'insensitive' };
+    where.area = { contains: String(filters.area) };
   }
 
   const donors = await prisma.donor.findMany({ where, orderBy: [{ available: 'desc' }, { createdAt: 'desc' }] });
@@ -120,32 +137,68 @@ app.get('/api/donors', asyncHandler(async (req, res) => {
     district: donor.district,
     area: donor.area,
     available: donor.available,
+    lastDonation: donor.lastDonation ? donor.lastDonation.toISOString() : null,
+    age: donor.age,
+    gender: donor.gender,
+    consent: donor.consent,
     createdAt: donor.createdAt,
     updatedAt: donor.updatedAt,
-    contactPhone: `tel:${donor.phone}`,
   })) });
 }));
 
 app.post('/api/donors', asyncHandler(async (req, res) => {
   const body = validateBody(donorCreateSchema, req.body);
-  const token = verifyJwt<{ phone: string; purpose: 'donor' | 'request' | 'edit' }>(body.verificationToken);
-  if (token.purpose !== 'donor' || token.phone !== sanitizePhone(body.phone)) {
-    return res.status(403).json({ success: false, error: 'Verification token mismatch' });
+  const phone = sanitizePhone(body.phone);
+  if (!validatePhone(phone)) {
+    return res.status(400).json({ success: false, error: 'Invalid Bangladeshi phone number' });
+  }
+
+  if (body.verificationToken) {
+    const token = verifyJwt<{ phone: string; purpose: 'donor' | 'request' | 'edit' }>(body.verificationToken);
+    if (token.purpose !== 'donor' || token.phone !== phone) {
+      return res.status(403).json({ success: false, error: 'Verification token mismatch' });
+    }
+  }
+
+  if (!body.consent) {
+    return res.status(400).json({ success: false, error: 'You must consent before registering as a donor.' });
+  }
+
+  const existingDonor = await prisma.donor.findUnique({ where: { phone } });
+  if (existingDonor) {
+    return res.status(409).json({
+      success: false,
+      error: 'This phone number is already registered as a donor. Please update your existing listing instead.',
+    });
   }
 
   const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
-  const donor = await prisma.donor.create({ data: {
-    name: body.name,
-    phone: sanitizePhone(body.phone),
-    bloodGroup: body.bloodGroup,
-    district: body.district as any,
-    area: body.area,
-    lastDonation: body.lastDonation ? new Date(body.lastDonation) : null,
-    available: body.available ?? true,
-    expiresAt,
-  }});
+  let donor;
+  try {
+    donor = await prisma.donor.create({ data: {
+      name: body.name,
+      phone,
+      bloodGroup: body.bloodGroup,
+      district: body.district as any,
+      area: body.area,
+      lastDonation: body.lastDonation ? new Date(body.lastDonation) : null,
+      age: body.age,
+      gender: body.gender,
+      available: body.available ?? true,
+      consent: body.consent,
+      expiresAt,
+    }});
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return res.status(409).json({
+        success: false,
+        error: 'This phone number is already registered as a donor. Please update your existing listing instead.',
+      });
+    }
+    throw error;
+  }
 
-  return sendJson(res, { success: true, data: { id: donor.id } });
+  return sendJson(res, { success: true, data: { id: donor.id, message: 'Donor registered successfully' } });
 }));
 
 app.patch('/api/donors/:id', asyncHandler(async (req, res) => {
@@ -193,6 +246,132 @@ app.delete('/api/donors/:id', asyncHandler(async (req, res) => {
   return sendJson(res, { success: true, data: { id: donorId } });
 }));
 
+app.get('/api/contact-requests', asyncHandler(async (req, res) => {
+  const authorization = req.header('Authorization');
+  const verificationToken = authorization?.match(/^Bearer\s+(.+)$/i)?.[1];
+  if (!verificationToken) {
+    return res.status(401).json({ success: false, error: 'Phone verification is required' });
+  }
+
+  const token = verifyJwt<{ phone: string; purpose: 'donor' | 'request' | 'edit' }>(verificationToken);
+  const donorPhone = req.query.donorPhone ? sanitizePhone(String(req.query.donorPhone)) : null;
+  const requesterPhone = req.query.requesterPhone ? sanitizePhone(String(req.query.requesterPhone)) : null;
+
+  const where: any = {};
+  if (donorPhone) {
+    if (token.purpose !== 'donor' || token.phone !== donorPhone) {
+      return res.status(403).json({ success: false, error: 'Verification token does not match donor phone' });
+    }
+    where.donor = { phone: donorPhone };
+  } else if (requesterPhone) {
+    if (token.purpose !== 'request' || token.phone !== requesterPhone) {
+      return res.status(403).json({ success: false, error: 'Verification token does not match requester phone' });
+    }
+    where.requesterPhone = requesterPhone;
+  } else {
+    return res.status(400).json({ success: false, error: 'A verified phone number is required' });
+  }
+
+  const requests = await prisma.donorContactRequest.findMany({
+    where,
+    orderBy: { createdAt: 'desc' },
+    include: { donor: true },
+  });
+
+  return sendJson(res, { success: true, data: requests.map((request) => ({
+    id: request.id,
+    donorId: request.donorId,
+    donorName: request.donorName ?? request.donor.name,
+    requesterName: request.requesterName,
+    requesterPhone: request.requesterPhone,
+    requesterMessage: request.requesterMessage,
+    donorPhone: request.status === 'ACCEPTED' ? request.donor.phone : null,
+    status: request.status,
+    createdAt: request.createdAt,
+    updatedAt: request.updatedAt,
+  })) });
+}));
+
+app.post('/api/donors/:id/contact-requests', asyncHandler(async (req, res) => {
+  const donorId = req.params.id;
+  const body = z.object({
+    requesterName: z.string().min(2),
+    requesterPhone: z.string().min(8),
+    message: z.string().min(10).max(500).optional(),
+  }).parse(req.body);
+
+  const requesterPhone = sanitizePhone(body.requesterPhone);
+  if (!validatePhone(requesterPhone)) {
+    return res.status(400).json({ success: false, error: 'Invalid requester phone number' });
+  }
+
+  const donor = await prisma.donor.findUnique({ where: { id: donorId } });
+  if (!donor) return res.status(404).json({ success: false, error: 'Donor not found' });
+
+  const limitKey = `contact-request:${requesterPhone}`;
+  if (!dailyRateLimit(limitKey, 5, 24 * 60 * 60 * 1000)) {
+    return res.status(429).json({ success: false, error: 'Too many contact requests today. Please try again tomorrow.' });
+  }
+
+  const request = await prisma.donorContactRequest.create({
+    data: {
+      donorId: donor.id,
+      donorName: donor.name,
+      requesterName: body.requesterName,
+      requesterPhone,
+      requesterMessage: body.message || null,
+      status: 'PENDING',
+    },
+  });
+
+  return sendJson(res, { success: true, data: { id: request.id, status: request.status, message: 'Contact request sent to donor' } });
+}));
+
+app.patch('/api/contact-requests/:id/respond', asyncHandler(async (req, res) => {
+  const requestId = req.params.id;
+  const body = z.object({
+    donorPhone: z.string().min(8),
+    status: z.enum(['ACCEPTED', 'DECLINED']),
+    verificationToken: z.string(),
+  }).parse(req.body);
+
+  const donorPhone = sanitizePhone(body.donorPhone);
+  const token = verifyJwt<{ phone: string; purpose: 'donor' | 'request' | 'edit' }>(body.verificationToken);
+  if (token.purpose !== 'donor' || token.phone !== donorPhone) {
+    return res.status(403).json({ success: false, error: 'Verification token does not match donor phone' });
+  }
+
+  const donor = await prisma.donor.findUnique({ where: { phone: donorPhone } });
+  if (!donor) return res.status(404).json({ success: false, error: 'Donor not found' });
+
+  const existing = await prisma.donorContactRequest.findUnique({ where: { id: requestId } });
+  if (!existing) return res.status(404).json({ success: false, error: 'Contact request not found' });
+  if (existing.donorId !== donor.id) {
+    return res.status(403).json({ success: false, error: 'This donor cannot respond to that request' });
+  }
+
+  const updated = await prisma.donorContactRequest.update({
+    where: { id: requestId },
+    data: {
+      status: body.status,
+      donorPhone: body.status === 'ACCEPTED' ? donor.phone : null,
+      donorPhoneVisible: body.status === 'ACCEPTED',
+      requesterPhoneVisible: true,
+    },
+    include: { donor: true },
+  });
+
+  return sendJson(res, { success: true, data: {
+    id: updated.id,
+    donorId: updated.donorId,
+    donorName: updated.donorName ?? donor.name,
+    requesterName: updated.requesterName,
+    requesterPhone: updated.requesterPhone,
+    donorPhone: updated.status === 'ACCEPTED' ? donor.phone : null,
+    status: updated.status,
+  }});
+}));
+
 app.get('/api/requests', asyncHandler(async (req, res) => {
   const fulfilled = req.query.fulfilled === 'true';
   const requests = await prisma.emergencyRequest.findMany({
@@ -204,16 +383,16 @@ app.get('/api/requests', asyncHandler(async (req, res) => {
 
 app.post('/api/requests', asyncHandler(async (req, res) => {
   const body = validateBody(requestCreateSchema, req.body);
-  const token = verifyJwt<{ phone: string; purpose: 'donor' | 'request' | 'edit' }>(body.verificationToken);
-  if (token.purpose !== 'request' || token.phone !== sanitizePhone(body.contactPhone)) {
-    return res.status(403).json({ success: false, error: 'Verification token mismatch' });
+  const contactPhone = sanitizePhone(body.contactPhone);
+  if (!validatePhone(contactPhone)) {
+    return res.status(400).json({ success: false, error: 'Invalid Bangladeshi phone number' });
   }
 
   const request = await prisma.emergencyRequest.create({ data: {
     bloodGroup: body.bloodGroup,
     hospital: body.hospital,
     district: body.district as any,
-    contactPhone: sanitizePhone(body.contactPhone),
+    contactPhone,
     unitsNeeded: body.unitsNeeded,
     note: body.note,
   }});

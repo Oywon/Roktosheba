@@ -2,19 +2,16 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { ZodError, z } from 'zod';
 
-const PHONE_REGEX = /^(\+88)?01[3-9]\d{8}$/;
+const PHONE_REGEX = /^(?:\+?88)?0?1[3-9]\d{8}$/;
 
-export const validatePhone = (phone: string) => PHONE_REGEX.test(phone);
+export const validatePhone = (phone: string) => PHONE_REGEX.test(phone.replace(/\s+/g, ''));
 
 export const sanitizePhone = (phone: string) => {
-  const digits = phone.replace(/[^0-9+]/g, '');
-  if (digits.startsWith('88') && !digits.startsWith('+')) {
-    return `+${digits}`;
-  }
-  if (digits.startsWith('0')) {
-    return `+88${digits.slice(1)}`;
-  }
-  return digits;
+  const digits = phone.replace(/\D/g, '');
+  if (!digits) return '';
+
+  const normalized = digits.startsWith('88') ? digits : digits.startsWith('0') ? `88${digits}` : `88${digits}`;
+  return `+${normalized}`;
 };
 
 export const requireEnv = (key: string) => {

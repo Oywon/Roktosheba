@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import PageHeader from '../components/PageHeader';
-import { fetchRequests, createRequest, requestOtp, verifyOtp } from '../lib/api';
-import { bloodGroupOptions, districtOptions } from '../lib/lists';
+import { fetchRequests, createRequest } from '../lib/api';
+import { bloodGroupOptions, districtOptions, isBangladeshiPhone } from '../lib/lists';
 import { EmergencyRequest, BloodGroup, District } from '../types';
 
 export default function RequestsPage() {
@@ -12,10 +12,9 @@ export default function RequestsPage() {
   const [contactPhone, setContactPhone] = useState('');
   const [unitsNeeded, setUnitsNeeded] = useState('');
   const [note, setNote] = useState('');
-  const [otpCode, setOtpCode] = useState('');
-  const [verificationToken, setVerificationToken] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const loadRequests = async () => {
     try {
@@ -30,104 +29,82 @@ export default function RequestsPage() {
     loadRequests();
   }, []);
 
-  const sendOtp = async () => {
-    setError(null);
-    try {
-      await requestOtp(contactPhone);
-      setMessage('OTP sent to your phone. Enter it below and verify.');
-    } catch (err: any) {
-      setError(err.message || 'Failed to send OTP');
-    }
-  };
-
-  const verifyPhone = async () => {
-    setError(null);
-    try {
-      const result = await verifyOtp(contactPhone, otpCode, 'request');
-      setVerificationToken(result.verificationToken);
-      setMessage('Phone verified. Submit the request now.');
-    } catch (err: any) {
-      setError(err.message || 'OTP verification failed');
-    }
-  };
-
   const submitRequest = async () => {
     setError(null);
-    if (!verificationToken) {
-      setError('Please verify your phone first.');
+    setMessage(null);
+    if (hospital.trim().length < 2) {
+      setError('Please enter a hospital or location.');
       return;
     }
+    if (!isBangladeshiPhone(contactPhone)) {
+      setError('Please enter a valid Bangladeshi mobile number.');
+      return;
+    }
+    setSubmitting(true);
     try {
       await createRequest({
         bloodGroup,
-        hospital,
+        hospital: hospital.trim(),
         district,
-        contactPhone,
-        unitsNeeded: unitsNeeded || undefined,
-        note: note || undefined,
-        verificationToken,
+        contactPhone: contactPhone.trim(),
+        unitsNeeded: unitsNeeded.trim() || undefined,
+        note: note.trim() || undefined,
       });
-      setMessage('Request posted. Help is on the way.');
+      setMessage('Emergency request posted. Help is on the way.');
       setHospital('');
       setContactPhone('');
       setUnitsNeeded('');
       setNote('');
-      setOtpCode('');
-      setVerificationToken('');
-      loadRequests();
+      await loadRequests();
     } catch (err: any) {
       setError(err.message || 'Failed to post request');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
     <div>
       <PageHeader title="Emergency requests" description="Share urgent blood needs and browse active requests." />
-      <section className="form-card">
+      <form className="form-card" onSubmit={(event) => { event.preventDefault(); void submitRequest(); }}>
         <div className="form-row">
-          <label>Blood group</label>
-          <select value={bloodGroup} onChange={(event) => setBloodGroup(event.target.value as BloodGroup)}>
+          <label htmlFor="emergency-blood-group">Blood group</label>
+          <select id="emergency-blood-group" value={bloodGroup} onChange={(event) => setBloodGroup(event.target.value as BloodGroup)}>
             {bloodGroupOptions.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
         </div>
         <div className="form-row">
-          <label>Hospital or location</label>
-          <input value={hospital} onChange={(event) => setHospital(event.target.value)} placeholder="Ex: Apollo Hospital" />
+          <label htmlFor="emergency-hospital">Hospital or location</label>
+          <input id="emergency-hospital" value={hospital} onChange={(event) => setHospital(event.target.value)} placeholder="Hospital or area" required minLength={2} />
         </div>
         <div className="form-row">
-          <label>District</label>
-          <select value={district} onChange={(event) => setDistrict(event.target.value as District)}>
+          <label htmlFor="emergency-district">District</label>
+          <select id="emergency-district" value={district} onChange={(event) => setDistrict(event.target.value as District)}>
             {districtOptions.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
         </div>
         <div className="form-row">
-          <label>Contact phone</label>
-          <input value={contactPhone} onChange={(event) => setContactPhone(event.target.value)} placeholder="01XXXXXXXXX" />
-        </div>
-        <div className="action-row">
-          <button className="secondary-button" onClick={sendOtp}>Send OTP</button>
-          <button className="secondary-button" onClick={verifyPhone}>Verify OTP</button>
+          <label htmlFor="emergency-phone">Contact phone</label>
+          <input id="emergency-phone" type="tel" inputMode="tel" value={contactPhone} onChange={(event) => setContactPhone(event.target.value)} placeholder="01XXXXXXXXX" required />
         </div>
         <div className="form-row">
-          <label>OTP code</label>
-          <input value={otpCode} onChange={(event) => setOtpCode(event.target.value)} placeholder="Enter OTP" />
+          <label htmlFor="emergency-units">Units needed <span>(optional)</span></label>
+          <input id="emergency-units" value={unitsNeeded} onChange={(event) => setUnitsNeeded(event.target.value)} placeholder="e.g. 2 units" />
         </div>
         <div className="form-row">
-          <label>Units needed</label>
-          <input value={unitsNeeded} onChange={(event) => setUnitsNeeded(event.target.value)} placeholder="Optional units" />
-        </div>
-        <div className="form-row">
-          <label>Note</label>
-          <textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Additional details" />
+          <label htmlFor="emergency-note">Additional details <span>(optional)</span></label>
+          <textarea id="emergency-note" value={note} onChange={(event) => setNote(event.target.value)} placeholder="Blood needed for surgery, patient details, or timing" />
         </div>
         {error ? <p className="error-text">{error}</p> : null}
         {message ? <p className="info-text">{message}</p> : null}
-        <button className="primary-button" onClick={submitRequest}>Post request</button>
-      </section>
+        <button className="primary-button" type="submit" disabled={submitting}>
+          {submitting ? 'Posting request...' : 'Post emergency request'}
+        </button>
+      </form>
       <section className="result-list">
         <h2>Active requests</h2>
         {requests.length === 0 ? <p className="info-text">No active requests yet.</p> : null}

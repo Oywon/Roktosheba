@@ -11,6 +11,33 @@ export const bloodGroupOptions: { value: BloodGroup; label: string }[] = [
   { value: 'O_MINUS', label: 'O-' },
 ];
 
+export const savarAreaOptions = [
+  'Savar Bazar',
+  'Ashulia',
+  'Genda',
+  'DEPZ',
+  'Jahangirnagar University area',
+  'Bank Town',
+  'Savar Upazila',
+  'Kashimpur',
+  'Dhamrai',
+  'Savar Union',
+  'Pallabi',
+  'Nayarhat',
+  'Madhupur',
+  'Boroikandi',
+  'Santanpara',
+  'Baipail',
+  'Dhalai',
+];
+
+export const isBangladeshiPhone = (value: string) => {
+  const digits = value.replace(/\D/g, '');
+  if (!digits) return false;
+
+  return /^(?:88)?0?1[3-9]\d{8}$/.test(digits);
+};
+
 export const districtOptions: { value: District; label: string }[] = [
   { value: 'BAGERHAT', label: 'Bagerhat' },
   { value: 'BANDARBAN', label: 'Bandarban' },

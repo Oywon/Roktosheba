@@ -2,8 +2,8 @@
   margin: 28px 0;
   padding: 24px;
   border-radius: 16px;
-  background: linear-gradient(135deg, rgba(200, 30, 58, 0.08), rgba(255, 107, 114, 0.06));
-  border: 1px solid rgba(200, 30, 58, 0.2);
+  background: linear-gradient(135deg, rgba(205, 28, 24, 0.1), rgba(255, 168, 150, 0.22));
+  border: 1px solid rgba(205, 28, 24, 0.2);
   position: relative;
   overflow: hidden;
 }
@@ -15,7 +15,7 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, #c81e3a, #ff6b72);
+  background: linear-gradient(90deg, #9B1313, #CD1C18);
   animation: pulse 2s ease-in-out infinite;
 }
 
@@ -33,7 +33,7 @@
   display: inline-block;
   padding: 8px 16px;
   border-radius: 999px;
-  background: linear-gradient(135deg, #c81e3a, #ff6b72);
+  background: linear-gradient(135deg, #9B1313, #CD1C18);
   color: white;
   font-weight: 700;
   font-size: 0.85rem;
@@ -65,14 +65,14 @@
   padding: 16px;
   border-radius: 12px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 253, 253, 0.6));
-  border: 1px solid rgba(200, 30, 58, 0.1);
+  border: 1px solid rgba(56, 0, 10, 0.12);
   transition: all 200ms ease;
 }
 
 .hotline-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 32px rgba(200, 30, 58, 0.15);
-  border-color: rgba(200, 30, 58, 0.2);
+  box-shadow: 0 12px 32px rgba(56, 0, 10, 0.14);
+  border-color: rgba(205, 28, 24, 0.25);
 }
 
 .hotline-icon {
@@ -113,19 +113,19 @@
   display: inline-block;
   padding: 10px 12px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #c81e3a, #ff6b72);
+  background: linear-gradient(135deg, #9B1313, #CD1C18);
   color: white;
   font-weight: 700;
   text-decoration: none;
   text-align: center;
   font-family: 'IBM Plex Mono', monospace;
   transition: all 160ms ease;
-  box-shadow: 0 4px 12px rgba(200, 30, 58, 0.15);
+  box-shadow: 0 4px 12px rgba(56, 0, 10, 0.18);
 }
 
 .phone-btn:hover {
   transform: scale(1.05);
-  box-shadow: 0 6px 20px rgba(200, 30, 58, 0.25);
+  box-shadow: 0 6px 20px rgba(56, 0, 10, 0.24);
 }
 
 .phone-btn:active {
@@ -134,16 +134,16 @@
 
 /* Dark Mode */
 :root.dark-mode .emergency-hotline {
-  background: linear-gradient(135deg, rgba(200, 30, 58, 0.15), rgba(255, 107, 114, 0.1));
-  border-color: rgba(200, 30, 58, 0.3);
+  background: linear-gradient(135deg, rgba(205, 28, 24, 0.24), rgba(255, 168, 150, 0.1));
+  border-color: rgba(255, 168, 150, 0.28);
 }
 
 :root.dark-mode .hotline-card {
-  background: linear-gradient(135deg, rgba(30, 30, 40, 0.8), rgba(40, 40, 50, 0.8));
-  border-color: rgba(200, 30, 58, 0.2);
+  background: linear-gradient(135deg, rgba(75, 17, 25, 0.9), rgba(91, 27, 34, 0.8));
+  border-color: rgba(255, 168, 150, 0.2);
 }
 
 :root.dark-mode .hotline-card:hover {
-  background: linear-gradient(135deg, rgba(40, 40, 50, 0.9), rgba(50, 50, 60, 0.9));
-  box-shadow: 0 12px 32px rgba(200, 30, 58, 0.25);
+  background: linear-gradient(135deg, rgba(91, 27, 34, 0.95), rgba(75, 17, 25, 0.9));
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
 }
